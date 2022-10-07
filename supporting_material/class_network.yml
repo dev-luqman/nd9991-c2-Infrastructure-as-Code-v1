@@ -1,15 +1,46 @@
 Description: >
     Udacity / Class-excercise
-    This template deploys a VPC with just a CIDR property.
+    This template deploys a VPC with just a CIDR property, security group and ec2 instance which will run apacher server automatically when done installing.
 
 
 Resources:
-    UdacityVPC: 
-        Type: AWS::EC2::VPC
-        Properties:
-            CidrBlock: 10.0.0.0/16
-            EnableDnsHostnames: true
-            Tags: 
-                - Key: Class 
-                  Value: Udacity
-            
+  UdacityVPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+
+  InstanceWebSecurity:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to our hosts and SSH from local only
+      VpcId: vpc-0c30e4a8fb5f6c0a7
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  WebAppLaunchConfig:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-026b57f3c383c2eec
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet: 
+            - Ref: "InstanceWebSecurity"
+          SubnetId: subnet-0699b5ad3388d3eb4
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd 
